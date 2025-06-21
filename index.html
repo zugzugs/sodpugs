@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoD PUG Finder - Season of Discovery Raid Calendar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #e4e4e4;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .login-btn, .add-pug-btn {
+            background: linear-gradient(45deg, #5865f2, #7289da);
+            color: white;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover, .add-pug-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(88, 101, 242, 0.3);
+        }
+
+        .add-pug-btn {
+            background: linear-gradient(45deg, #57f287, #5cb85c);
+        }
+
+        .filters {
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #555;
+            color: #e4e4e4;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+
+        .calendar-container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #555;
+            color: #e4e4e4;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .day-header {
+            background: #444;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            color: #ffd700;
+        }
+
+        .day-cell {
+            background: rgba(255, 255, 255, 0.05);
+            min-height: 120px;
+            padding: 0.5rem;
+            position: relative;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .day-cell:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #555;
+        }
+
+        .day-number {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #ccc;
+        }
+
+        .day-cell.other-month .day-number {
+            color: #666;
+        }
+
+        .pug-event {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border-radius: 4px;
+            padding: 0.3rem;
+            margin-bottom: 0.3rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid #ffd700;
+        }
+
+        .pug-event:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .pug-event.molten-core {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+        }
+
+        .pug-event.blackwing-lair {
+            background: linear-gradient(45deg, #2f3542, #40739e);
+        }
+
+        .pug-event.scarlet {
+            background: linear-gradient(45deg, #ff6348, #ff4757);
+        }
+
+        .pug-time {
+            font-size: 0.7rem;
+            opacity: 0.9;
+            font-weight: 600;
+        }
+
+        .pug-name {
+            font-weight: 600;
+            margin: 0.2rem 0;
+        }
+
+        .pug-details {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #2c2c54, #1a1a2e);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 5% auto;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            border: 1px solid #444;
+        }
+
+        .close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #ccc;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #ffd700;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #555;
+            border-radius: 6px;
+            color: #e4e4e4;
+            font-size: 1rem;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, #57f287, #5cb85c);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(87, 242, 135, 0.3);
+        }
+
+        .event-modal .modal-content {
+            max-width: 700px;
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .event-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .event-time {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .event-details {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            border-left: 3px solid #ffd700;
+        }
+
+        .discord-link, .raid-helper-link {
+            display: inline-block;
+            background: linear-gradient(45deg, #5865f2, #7289da);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-right: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .discord-link:hover, .raid-helper-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(88, 101, 242, 0.3);
+        }
+
+        .raid-helper-link {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .signup-info {
+            background: rgba(0, 255, 127, 0.1);
+            border: 1px solid #00ff7f;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .signup-count {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #00ff7f;
+        }
+
+        @media (max-width: 768px) {
+            .calendar-grid {
+                font-size: 0.8rem;
+            }
+            
+            .day-cell {
+                min-height: 80px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">⚔️ SoD PUG Finder</div>
+        <div class="user-section">
+            <button class="login-btn" onclick="handleDiscordLogin()">
+                🎮 Login with Discord
+            </button>
+            <button class="add-pug-btn" onclick="openAddPugModal()">
+                ➕ Add PUG
+            </button>
+        </div>
+    </div>
+
+    <div class="filters">
+        <div class="filter-group">
+            <label>Raid:</label>
+            <select class="filter-select" id="raidFilter" onchange="filterEvents()">
+                <option value="">All Raids</option>
+                <option value="molten-core">Molten Core</option>
+                <option value="blackwing-lair">Blackwing Lair</option>
+                <option value="scarlet">Scarlet Enclave</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Loot Rules:</label>
+            <select class="filter-select" id="lootFilter" onchange="filterEvents()">
+                <option value="">All</option>
+                <option value="sr">Soft Reserve</option>
+                <option value="ms-os">MS > OS</option>
+                <option value="gdkp">GDKP</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Time:</label>
+            <select class="filter-select" id="timeFilter" onchange="filterEvents()">
+                <option value="">All Times</option>
+                <option value="morning">Morning (6AM-12PM)</option>
+                <option value="afternoon">Afternoon (12PM-6PM)</option>
+                <option value="evening">Evening (6PM-12AM)</option>
+                <option value="night">Night (12AM-6AM)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <div class="calendar-nav">
+                <button class="nav-btn" onclick="previousMonth()">← Previous</button>
+                <h2 id="currentMonth">June 2025</h2>
+                <button class="nav-btn" onclick="nextMonth()">Next →</button>
+            </div>
+        </div>
+
+        <div class="calendar-grid" id="calendar">
+            <!-- Calendar will be generated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Add PUG Modal -->
+    <div id="addPugModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddPugModal()">&times;</span>
+            <h2 style="color: #ffd700; margin-bottom: 1.5rem;">Add New PUG</h2>
+            
+            <div class="form-group">
+                <label class="form-label">PUG Name</label>
+                <input type="text" class="form-input" id="pugName" placeholder="e.g., Rix's SoD Pugs">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="pugDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Time</label>
+                    <input type="time" class="form-input" id="pugTime" value="18:00">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Raid Name</label>
+                <select class="form-select" id="raidName">
+                    <option value="molten-core">Molten Core</option>
+                    <option value="blackwing-lair">Blackwing Lair</option>
+                    <option value="scarlet">Scarlet Enclave</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Loot Rules</label>
+                <input type="text" class="form-input" id="lootRules" placeholder="e.g., 3xSR MS>OS Charred Emblem HR">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="usingSoftres">
+                        <label for="usingSoftres">Using Softres?</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="anythingHR">
+                        <label for="anythingHR">Anything HR'd?</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Discord Invite Link</label>
+                <input type="url" class="form-input" id="discordInvite" placeholder="https://discord.gg/yourlink">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Raid Helper ID</label>
+                <input type="text" class="form-input" id="raidHelperId" placeholder="e.g., 1385694328076369921">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Additional Notes</label>
+                <textarea class="form-textarea" id="additionalNotes" placeholder="Any additional information..."></textarea>
+            </div>
+
+            <button class="submit-btn" onclick="submitPug()">Create PUG</button>
+        </div>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div id="eventModal" class="modal event-modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEventModal()">&times;</span>
+            <div id="eventDetails">
+                <!-- Event details will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data - in a real app, this would come from a backend
+        let pugs = [
+            {
+                id: 1,
+                name: "Rix's SoD Pugs",
+                raid: "scarlet",
+                date: "2025-06-23",
+                time: "20:00",
+                lootRules: "x2 SR>MS>OS - Charred Emblem HR",
+                usingSoftres: true,
+                anythingHR: true,
+                discordInvite: "https://discord.gg/6fPhkJND",
+                raidHelperId: "1385694328076369921",
+                signupCount: 4,
+                maxSignups: 25,
+                status: "active",
+                inviteExpiry: "2025-06-27T13:04:29+00:00"
+            },
+            {
+                id: 2,
+                name: "Weekend Warriors MC",
+                raid: "molten-core",
+                date: "2025-06-22",
+                time: "19:30",
+                lootRules: "GDKP - 50/50 split",
+                usingSoftres: false,
+                anythingHR: false,
+                discordInvite: "https://discord.gg/example",
+                raidHelperId: "1234567890123456789",
+                signupCount: 18,
+                maxSignups: 40,
+                status: "active"
+            },
+            {
+                id: 3,
+                name: "Casual BWL Run",
+                raid: "blackwing-lair",
+                date: "2025-06-25",
+                time: "21:00",
+                lootRules: "MS>OS+1, DFT/CTS reserved",
+                usingSoftres: false,
+                anythingHR: true,
+                discordInvite: "https://discord.gg/example2",
+                raidHelperId: "9876543210987654321",
+                signupCount: 12,
+                maxSignups: 40,
+                status: "active"
+            }
+        ];
+
+        let currentDate = new Date();
+        let isLoggedIn = false;
+
+        function generateCalendar(year, month) {
+            const calendar = document.getElementById('calendar');
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"];
+            
+            document.getElementById('currentMonth').textContent = `${monthNames[month]} ${year}`;
+            
+            calendar.innerHTML = '';
+            
+            // Add day headers
+            const dayHeaders = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            dayHeaders.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                dayHeader.textContent = day;
+                calendar.appendChild(dayHeader);
+            });
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+            
+            // Previous month days
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const dayCell = createDayCell(daysInPrevMonth - i, true);
+                calendar.appendChild(dayCell);
+            }
+            
+            // Current month days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = createDayCell(day, false);
+                const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                
+                // Add PUGs for this day
+                const dayPugs = pugs.filter(pug => pug.date === dateStr);
+                dayPugs.forEach(pug => {
+                    const pugElement = createPugElement(pug);
+                    dayCell.appendChild(pugElement);
+                });
+                
+                calendar.appendChild(dayCell);
+            }
+            
+            // Next month days
+            const totalCells = calendar.children.length - 7; // Subtract day headers
+            const remainingCells = 42 - totalCells; // 6 rows * 7 days
+            for (let day = 1; day <= remainingCells; day++) {
+                const dayCell = createDayCell(day, true);
+                calendar.appendChild(dayCell);
+            }
+        }
+
+        function createDayCell(dayNumber, isOtherMonth) {
+            const dayCell = document.createElement('div');
+            dayCell.className = `day-cell ${isOtherMonth ? 'other-month' : ''}`;
+            
+            const dayNumberEl = document.createElement('div');
+            dayNumberEl.className = 'day-number';
+            dayNumberEl.textContent = dayNumber;
+            dayCell.appendChild(dayNumberEl);
+            
+            return dayCell;
+        }
+
+        function createPugElement(pug) {
+            const pugEl = document.createElement('div');
+            pugEl.className = `pug-event ${pug.raid}`;
+            pugEl.onclick = () => showEventDetails(pug);
+            
+            pugEl.innerHTML = `
+                <div class="pug-time">${pug.time}</div>
+                <div class="pug-name">${pug.name}</div>
+                <div class="pug-details">${pug.signupCount}/${pug.maxSignups}</div>
+            `;
+            
+            return pugEl;
+        }
+
+        function showEventDetails(pug) {
+            const raidNames = {
+                'molten-core': 'Molten Core',
+                'blackwing-lair': 'Blackwing Lair',
+                'scarlet': 'Scarlet Enclave',
+                'other': 'Other'
+            };
+
+            const eventDetails = document.getElementById('eventDetails');
+            eventDetails.innerHTML = `
+                <div class="event-header">
+                    <div class="event-title">${pug.name}</div>
+                    <div class="event-time">${pug.date} at ${pug.time}</div>
+                </div>
+                
+                <div class="event-details">
+                    <div class="detail-item">
+                        <span><strong>Raid:</strong></span>
+                        <span>${raidNames[pug.raid] || pug.raid}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span><strong>Loot Rules:</strong></span>
+                        <span>${pug.lootRules}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span><strong>Using Softres:</strong></span>
+                        <span>${pug.usingSoftres ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span><strong>Anything HR'd:</strong></span>
+                        <span>${pug.anythingHR ? 'Yes' : 'No'}</span>
+                    </div>
+                </div>
+                
+                <div style="margin: 1.5rem 0;">
+                    <a href="${pug.discordInvite}" target="_blank" class="discord-link">
+                        🎮 Join Discord
+                    </a>
+                    <a href="https://raid-helper.dev/event/${pug.raidHelperId}" target="_blank" class="raid-helper-link">
+                        📝 Sign Up (Raid Helper)
+                    </a>
+                </div>
+                
+                <div class="signup-info">
+                    <div class="signup-count">${pug.signupCount} / ${pug.maxSignups} signed up</div>
+                    <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                        Status: <span style="color: #00ff7f;">Active</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('eventModal').style.display = 'block';
+        }
+
+        function handleDiscordLogin() {
+            if (!isLoggedIn) {
+                // Simulate Discord OAuth login
+                alert('Redirecting to Discord OAuth...');
+                // In a real app, this would redirect to Discord OAuth
+                setTimeout(() => {
+                    isLoggedIn = true;
+                    document.querySelector('.login-btn').textContent = '👤 Logged In';
+                    document.querySelector('.login-btn').style.background = 'linear-gradient(45deg, #57f287, #5cb85c)';
+                }, 1000);
+            }
+        }
+
+        function openAddPugModal() {
+            if (!isLoggedIn) {
+                alert('Please login with Discord first!');
+                return;
+            }
+            document.getElementById('addPugModal').style.display = 'block';
+        }
+
+        function closeAddPugModal() {
+            document.getElementById('addPugModal').style.display = 'none';
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+        }
+
+        function submitPug() {
+            const pugData = {
+                id: pugs.length + 1,
+                name: document.getElementById('pugName').value,
+                raid: document.getElementById('raidName').value,
+                date: document.getElementById('pugDate').value,
+                time: document.getElementById('pugTime').value,
+                lootRules: document.getElementById('lootRules').value,
+                usingSoftres: document.getElementById('usingSoftres').checked,
+                anythingHR: document.getElementById('anythingHR').checked,
+                discordInvite: document.getElementById('discordInvite').value,
+                raidHelperId: document.getElementById('raidHelperId').value,
+                signupCount: 0,
+                maxSignups: 40,
+                status: 'active'
+            };
+
+            if (!pugData.name || !pugData.date || !pugData.time) {
+                alert('Please fill in all required fields!');
+                return;
+            }
+
+            pugs.push(pugData);
+            closeAddPugModal();
+            generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+            alert('PUG created successfully!');
+            
+            // Clear form
+            document.getElementById('pugName').value = '';
+            document.getElementById('pugDate').value = '';
+            document.getElementById('pugTime').value = '18:00';
+            document.getElementById('lootRules').value = '';
+            document.getElementById('usingSoftres').checked = false;
+            document.getElementById('anythingHR').checked = false;
+            document.getElementById('discordInvite').value = '';
+            document.getElementById('raidHelperId').value = '';
+        }
+
+        function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        }
+
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        }
+
+        function filterEvents() {
+            // Filter functionality would be implemented here
+            // For now, just regenerate the calendar
+            generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const addModal = document.getElementById('addPugModal');
+            const eventModal = document.getElementById('eventModal');
+            if (event.target === addModal) {
+                addModal.style.display = 'none';
+            }
+            if (event.target === eventModal) {
+                eventModal.style.display = 'none';
+            }
+        }
+
+        // Initialize calendar
+        generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+
+        // Set today's date as default for the form
+        document.getElementById('pugDate').value = new Date().toISOString().split('T')[0];
+
+        // Simulate Discord invite checking (would be done server-side in real app)
+        async function checkDiscordInvites() {
+            // This would call the Discord API to check invite expiry
+            console.log('Checking Discord invite expiry...');
+            // Implementation would go here
+        }
+
+        // Simulate Raid Helper integration (would be done server-side in real app)
+        async function updateRaidHelperData() {
+            // This would call the Raid Helper API to get signup counts
+            console.log('Updating Raid Helper signup data...');
+            // Implementation would go here
+        }
+
+        // Run checks periodically
+        setInterval(() => {
+            checkDiscordInvites();
+            updateRaidHelperData();
+        }, 300000); // Check every 5 minutes
+    </script>
+</body>
+</html>
