@@ -1,0 +1,856 @@
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, Users, Shield, Sword, Heart, Zap, Plus, Filter, Bell, ExternalLink, User, LogIn, Search, Star, AlertCircle } from 'lucide-react';
+
+const WoWPugFinder = () => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showAddPug, setShowAddPug] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [selectedRaid, setSelectedRaid] = useState('all');
+  const [pugs, setPugs] = useState([]);
+  const [selectedPug, setSelectedPug] = useState(null);
+
+  // Sample PUG data with comprehensive information
+  const samplePugs = [
+    {
+      id: 1,
+      pugName: "Rix's SoD Pugs",
+      raidName: "Scarlet Enclave",
+      time: "20:00",
+      date: "2025-06-23",
+      day: "Monday",
+      lootRules: "2x SR>MS>OS - Charred Emblem HR",
+      softRes: true,
+      hrItems: ["Charred Emblem"],
+      discordInvite: "https://discord.gg/6fPhkJND",
+      raidHelperId: "1385694328076369921",
+      signups: 4,
+      maxSignups: 40,
+      leader: "Rixrax/Rixr",
+      status: "recruiting",
+      inviteExpiry: "2025-06-27T13:04:29+00:00",
+      roster: {
+        tank: 1,
+        healer: 0,
+        dps: 3
+      }
+    },
+    {
+      id: 2,
+      pugName: "Dad Guild Casual Run",
+      raidName: "Gnomeregan",
+      time: "21:30",
+      date: "2025-06-21",
+      day: "Saturday", 
+      lootRules: "3x SR MS>OS Need>Greed",
+      softRes: true,
+      hrItems: [],
+      discordInvite: "https://discord.gg/dadguild",
+      raidHelperId: "1385694328076369922",
+      signups: 8,
+      maxSignups: 10,
+      leader: "DadTank",
+      status: "full",
+      inviteExpiry: "2025-06-22T21:30:00+00:00",
+      roster: {
+        tank: 1,
+        healer: 2,
+        dps: 7
+      }
+    },
+    {
+      id: 3,
+      pugName: "Weekend Warriors",
+      raidName: "Blackfathom Deeps",
+      time: "19:00",
+      date: "2025-06-22",
+      day: "Sunday",
+      lootRules: "MS>OS Roll 100",
+      softRes: false,
+      hrItems: ["Twilight Orb"],
+      discordInvite: "https://discord.gg/warriors",
+      raidHelperId: "1385694328076369923",
+      signups: 15,
+      maxSignups: 20,
+      leader: "WarriorDad",
+      status: "recruiting",
+      inviteExpiry: "2025-06-23T19:00:00+00:00",
+      roster: {
+        tank: 2,
+        healer: 3,
+        dps: 10
+      }
+    }
+  ];
+
+  useEffect(() => {
+    setPugs(samplePugs);
+  }, []);
+
+  const raids = [
+    { name: 'all', display: 'All Raids', color: 'bg-gray-600' },
+    { name: 'Scarlet Enclave', display: 'Scarlet Enclave', color: 'bg-red-600' },
+    { name: 'Gnomeregan', display: 'Gnomeregan', color: 'bg-green-600' },
+    { name: 'Blackfathom Deeps', display: 'Blackfathom Deeps', color: 'bg-blue-600' },
+    { name: 'Sunken Temple', display: 'Sunken Temple', color: 'bg-yellow-600' }
+  ];
+
+  const getRoleIcon = (role) => {
+    switch(role) {
+      case 'tank': return <Shield className="w-4 h-4 text-blue-400" />;
+      case 'healer': return <Heart className="w-4 h-4 text-green-400" />;
+      case 'dps': return <Sword className="w-4 h-4 text-red-400" />;
+      default: return <Users className="w-4 h-4" />;
+    }
+  };
+
+  const formatDate = (date) => {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(new Date(date));
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'recruiting': return 'bg-green-500';
+      case 'full': return 'bg-yellow-500';
+      case 'closed': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const filteredPugs = selectedRaid === 'all' 
+    ? pugs 
+    : pugs.filter(pug => pug.raidName === selectedRaid);
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDay = firstDay.getDay();
+    
+    const days = [];
+    
+    // Previous month's days
+    for (let i = startDay - 1; i >= 0; i--) {
+      const prevMonth = new Date(year, month - 1, 0);
+      days.push({
+        date: prevMonth.getDate() - i,
+        isCurrentMonth: false,
+        fullDate: new Date(year, month - 1, prevMonth.getDate() - i)
+      });
+    }
+    
+    // Current month's days
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push({
+        date: day,
+        isCurrentMonth: true,
+        fullDate: new Date(year, month, day)
+      });
+    }
+    
+    // Next month's days to fill the grid
+    const remainingDays = 42 - days.length;
+    for (let day = 1; day <= remainingDays; day++) {
+      days.push({
+        date: day,
+        isCurrentMonth: false,
+        fullDate: new Date(year, month + 1, day)
+      });
+    }
+    
+    return days;
+  };
+
+  const getPugsForDate = (date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return filteredPugs.filter(pug => pug.date === dateStr);
+  };
+
+  const mockDiscordLogin = () => {
+    setIsLoggedIn(true);
+    setUser({
+      username: "DadGamer#1337",
+      avatar: "https://cdn.discordapp.com/embed/avatars/0.png",
+      id: "123456789"
+    });
+  };
+
+  const AddPugModal = () => {
+    const [formData, setFormData] = useState({
+      pugName: '',
+      raidName: 'Scarlet Enclave',
+      time: '20:00',
+      date: selectedDate.toISOString().split('T')[0],
+      lootRules: '',
+      softRes: true,
+      hrItems: '',
+      discordInvite: '',
+      raidHelperId: ''
+    });
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      const newPug = {
+        id: pugs.length + 1,
+        ...formData,
+        day: new Date(formData.date).toLocaleDateString('en-US', { weekday: 'long' }),
+        hrItems: formData.hrItems.split(',').map(item => item.trim()).filter(item => item),
+        signups: 0,
+        maxSignups: 40,
+        leader: user.username,
+        status: 'recruiting',
+        inviteExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        roster: { tank: 0, healer: 0, dps: 0 }
+      };
+      
+      setPugs([...pugs, newPug]);
+      setShowAddPug(false);
+      setFormData({
+        pugName: '',
+        raidName: 'Scarlet Enclave',
+        time: '20:00',
+        date: selectedDate.toISOString().split('T')[0],
+        lootRules: '',
+        softRes: true,
+        hrItems: '',
+        discordInvite: '',
+        raidHelperId: ''
+      });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-900 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-yellow-600">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-yellow-400">Add New PUG</h2>
+            <button 
+              onClick={() => setShowAddPug(false)}
+              className="text-gray-400 hover:text-white text-2xl"
+            >
+              ×
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-yellow-400 mb-2">PUG Name</label>
+                <input
+                  type="text"
+                  value={formData.pugName}
+                  onChange={(e) => setFormData({...formData, pugName: e.target.value})}
+                  className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-yellow-400 mb-2">Raid</label>
+                <select
+                  value={formData.raidName}
+                  onChange={(e) => setFormData({...formData, raidName: e.target.value})}
+                  className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white"
+                >
+                  {raids.slice(1).map(raid => (
+                    <option key={raid.name} value={raid.name}>{raid.display}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-yellow-400 mb-2">Time</label>
+                <input
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => setFormData({...formData, time: e.target.value})}
+                  className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-yellow-400 mb-2">Date</label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({...formData, date: e.target.value})}
+                  className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-yellow-400 mb-2">Loot Rules</label>
+              <input
+                type="text"
+                value={formData.lootRules}
+                onChange={(e) => setFormData({...formData, lootRules: e.target.value})}
+                placeholder="e.g., 3x SR MS>OS Need>Greed"
+                className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white"
+                required
+              />
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center text-yellow-400">
+                <input
+                  type="checkbox"
+                  checked={formData.softRes}
+                  onChange={(e) => setFormData({...formData, softRes: e.target.checked})}
+                  className="mr-2"
+                />
+                Using SoftRes?
+              </label>
+            </div>
+            
+            <div>
+              <label className="block text-yellow-400 mb-2">HR Items (comma separated)</label>
+              <input
+                type="text"
+                value={formData.hrItems}
+                onChange={(e) => setFormData({...formData, hrItems: e.target.value})}
+                placeholder="e.g., Charred Emblem, Rare Mount"
+                className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-yellow-400 mb-2">Discord Invite Link</label>
+              <input
+                type="url"
+                value={formData.discordInvite}
+                onChange={(e) => setFormData({...formData, discordInvite: e.target.value})}
+                placeholder="https://discord.gg/your-invite"
+                className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-yellow-400 mb-2">Raid Helper ID</label>
+              <input
+                type="text"
+                value={formData.raidHelperId}
+                onChange={(e) => setFormData({...formData, raidHelperId: e.target.value})}
+                placeholder="1385694328076369921"
+                className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white"
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-4 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowAddPug(false)}
+                className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-yellow-600 text-black rounded hover:bg-yellow-700 font-bold"
+              >
+                Create PUG
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const PugDetailModal = ({ pug }) => {
+    if (!pug) return null;
+
+    const isExpired = new Date(pug.inviteExpiry) < new Date();
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-900 rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-yellow-600">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h2 className="text-3xl font-bold text-yellow-400 mb-2">{pug.pugName}</h2>
+              <div className="flex items-center space-x-4 text-gray-300">
+                <span className="flex items-center"><Calendar className="w-4 h-4 mr-1" /> {formatDate(pug.date)}</span>
+                <span className="flex items-center"><Clock className="w-4 h-4 mr-1" /> {pug.time}</span>
+                <span className={`px-2 py-1 rounded text-xs font-bold ${getStatusColor(pug.status)}`}>
+                  {pug.status.toUpperCase()}
+                </span>
+              </div>
+            </div>
+            <button 
+              onClick={() => setSelectedPug(null)}
+              className="text-gray-400 hover:text-white text-2xl"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-xl font-bold text-yellow-400 mb-3">Raid Information</h3>
+                <div className="space-y-2 text-gray-300">
+                  <p><strong>Raid:</strong> {pug.raidName}</p>
+                  <p><strong>Leader:</strong> {pug.leader}</p>
+                  <p><strong>Loot Rules:</strong> {pug.lootRules}</p>
+                  <p><strong>SoftRes:</strong> {pug.softRes ? 'Yes' : 'No'}</p>
+                  {pug.hrItems.length > 0 && (
+                    <p><strong>HR Items:</strong> {pug.hrItems.join(', ')}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-xl font-bold text-yellow-400 mb-3">Current Roster</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      {getRoleIcon('tank')}
+                      <span className="ml-2 text-blue-400">Tanks</span>
+                    </div>
+                    <div className="text-2xl font-bold">{pug.roster.tank}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      {getRoleIcon('healer')}
+                      <span className="ml-2 text-green-400">Healers</span>
+                    </div>
+                    <div className="text-2xl font-bold">{pug.roster.healer}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      {getRoleIcon('dps')}
+                      <span className="ml-2 text-red-400">DPS</span>
+                    </div>
+                    <div className="text-2xl font-bold">{pug.roster.dps}</div>
+                  </div>
+                </div>
+                <div className="mt-4 text-center">
+                  <div className="text-lg">
+                    <span className="text-yellow-400 font-bold">{pug.signups}</span>
+                    <span className="text-gray-400">/{pug.maxSignups} signed up</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-yellow-600 h-2 rounded-full" 
+                      style={{width: `${(pug.signups / pug.maxSignups) * 100}%`}}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-xl font-bold text-yellow-400 mb-3">Join Information</h3>
+                <div className="space-y-3">
+                  {isExpired ? (
+                    <div className="flex items-center text-red-400 bg-red-900/20 p-3 rounded">
+                      <AlertCircle className="w-5 h-5 mr-2" />
+                      <span>Discord invite has expired</span>
+                    </div>
+                  ) : (
+                    <a 
+                      href={pug.discordInvite}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded font-bold transition-colors"
+                    >
+                      <ExternalLink className="w-5 h-5 mr-2" />
+                      Join Discord
+                    </a>
+                  )}
+                  
+                  {pug.raidHelperId && (
+                    <a 
+                      href={`https://raid-helper.dev/event/${pug.raidHelperId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded font-bold transition-colors"
+                    >
+                      <Users className="w-5 h-5 mr-2" />
+                      Sign Up via Raid Helper
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-xl font-bold text-yellow-400 mb-3">Status & Notifications</h3>
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-400">
+                    <p><strong>Invite Expires:</strong> {new Date(pug.inviteExpiry).toLocaleString()}</p>
+                  </div>
+                  
+                  {isLoggedIn && (
+                    <button className="flex items-center justify-center w-full bg-yellow-600 hover:bg-yellow-700 text-black px-4 py-2 rounded font-bold transition-colors">
+                      <Bell className="w-4 h-4 mr-2" />
+                      Get Notifications
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
+      {/* Header */}
+      <div className="bg-black/50 backdrop-blur-sm border-b border-yellow-600/30 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="text-3xl font-bold text-yellow-400 flex items-center">
+                <Zap className="w-8 h-8 mr-2" />
+                WoW SoD PUG Finder
+              </div>
+              <div className="hidden md:block text-gray-400 text-sm">
+                The Ultimate Calendar for Dad Gamers
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              {!isLoggedIn ? (
+                <button 
+                  onClick={mockDiscordLogin}
+                  className="flex items-center bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded font-bold transition-colors"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Login with Discord
+                </button>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <img src={user.avatar} alt="Avatar" className="w-8 h-8 rounded-full" />
+                    <span className="text-yellow-400 font-bold">{user.username}</span>
+                  </div>
+                  <button 
+                    onClick={() => setShowAddPug(true)}
+                    className="flex items-center bg-yellow-600 hover:bg-yellow-700 text-black px-4 py-2 rounded font-bold transition-colors"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add PUG
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Filters */}
+        <div className="mb-6 flex flex-wrap items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Filter className="w-5 h-5 text-yellow-400" />
+            <span className="text-yellow-400 font-bold">Filter by Raid:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {raids.map(raid => (
+              <button
+                key={raid.name}
+                onClick={() => setSelectedRaid(raid.name)}
+                className={`px-3 py-1 rounded text-sm font-bold transition-colors ${
+                  selectedRaid === raid.name 
+                    ? `${raid.color} text-white` 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {raid.display}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Calendar Navigation */}
+        <div className="bg-gray-800 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <button 
+              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
+              className="text-yellow-400 hover:text-yellow-300 text-2xl font-bold"
+            >
+              ‹
+            </button>
+            <h2 className="text-2xl font-bold text-yellow-400">
+              {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </h2>
+            <button 
+              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
+              className="text-yellow-400 hover:text-yellow-300 text-2xl font-bold"
+            >
+              ›
+            </button>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="text-center font-bold text-yellow-400 p-2">
+                {day}
+              </div>
+            ))}
+            
+            {getDaysInMonth(currentDate).map((day, index) => {
+              const dayPugs = getPugsForDate(day.fullDate);
+              const isToday = day.fullDate.toDateString() === new Date().toDateString();
+              const isSelected = day.fullDate.toDateString() === selectedDate.toDateString();
+              const isPastDate = day.fullDate < new Date() && !isToday;
+              
+              // Don't render past dates unless they're in a previous/next month preview
+              if (isPastDate && day.isCurrentMonth) {
+                return (
+                  <div
+                    key={index}
+                    className="min-h-[100px] p-2 border border-gray-700 rounded bg-gray-900/30 opacity-30"
+                  >
+                    <div className="text-sm font-bold mb-1 text-gray-600">
+                      {day.date}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      Past
+                    </div>
+                  </div>
+                );
+              }
+              
+              return (
+                <div
+                  key={index}
+                  onClick={() => !isPastDate && setSelectedDate(day.fullDate)}
+                  className={`
+                    min-h-[100px] p-2 border border-gray-700 rounded transition-all
+                    ${!day.isCurrentMonth ? 'text-gray-500 bg-gray-800/50 cursor-default' : 'bg-gray-800'}
+                    ${isPastDate ? 'cursor-default opacity-50' : 'cursor-pointer hover:bg-gray-700/50'}
+                    ${isToday ? 'ring-2 ring-yellow-400' : ''}
+                    ${isSelected ? 'bg-yellow-600/20' : ''}
+                  `}
+                >
+                  <div className={`text-sm font-bold mb-1 ${isToday ? 'text-yellow-400' : isPastDate ? 'text-gray-600' : ''}`}>
+                    {day.date}
+                  </div>
+                  <div className="space-y-1">
+                    {!isPastDate && dayPugs.slice(0, 3).map(pug => (
+                      <div
+                        key={pug.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPug(pug);
+                        }}
+                        className={`
+                          text-xs p-1 rounded cursor-pointer truncate
+                          ${raids.find(r => r.name === pug.raidName)?.color || 'bg-gray-600'}
+                          hover:opacity-80 transition-opacity
+                        `}
+                      >
+                        <div className="font-bold">{pug.time}</div>
+                        <div className="truncate">{pug.pugName}</div>
+                      </div>
+                    ))}
+                    {!isPastDate && dayPugs.length > 3 && (
+                      <div className="text-xs text-gray-400 font-bold">
+                        +{dayPugs.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Selected Date PUGs */}
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h3 className="text-2xl font-bold text-yellow-400 mb-4">
+            PUGs for {formatDate(selectedDate)}
+          </h3>
+          
+          {getPugsForDate(selectedDate).length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No PUGs scheduled for this date.</p>
+              {isLoggedIn && (
+                <button 
+                  onClick={() => setShowAddPug(true)}
+                  className="mt-4 bg-yellow-600 hover:bg-yellow-700 text-black px-6 py-2 rounded font-bold transition-colors"
+                >
+                  Create the First PUG!
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {getPugsForDate(selectedDate).map(pug => {
+                const isExpired = new Date(pug.inviteExpiry) < new Date();
+                const raidColor = raids.find(r => r.name === pug.raidName)?.color || 'bg-gray-600';
+                
+                return (
+                  <div
+                    key={pug.id}
+                    onClick={() => setSelectedPug(pug)}
+                    className="bg-gray-900 border border-gray-700 rounded-lg p-4 hover:border-yellow-600/50 cursor-pointer transition-all hover:shadow-lg"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="text-xl font-bold text-yellow-400 mb-1">{pug.pugName}</h4>
+                        <div className="flex items-center space-x-4 text-gray-300 text-sm">
+                          <span className="flex items-center">
+                            <Clock className="w-4 h-4 mr-1" />
+                            {pug.time}
+                          </span>
+                          <span className={`px-2 py-1 rounded text-xs font-bold text-white ${raidColor}`}>
+                            {pug.raidName}
+                          </span>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${getStatusColor(pug.status)}`}>
+                            {pug.status.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <div className="text-sm text-gray-400">Signups</div>
+                        <div className="text-xl font-bold text-yellow-400">
+                          {pug.signups}/{pug.maxSignups}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <div className="text-sm text-gray-400">Leader</div>
+                        <div className="font-bold flex items-center">
+                          <User className="w-4 h-4 mr-1" />
+                          {pug.leader}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="text-sm text-gray-400">Loot Rules</div>
+                        <div className="font-bold">{pug.lootRules}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          {getRoleIcon('tank')}
+                          <span className="text-sm">{pug.roster.tank}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {getRoleIcon('healer')}
+                          <span className="text-sm">{pug.roster.healer}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {getRoleIcon('dps')}
+                          <span className="text-sm">{pug.roster.dps}</span>
+                        </div>
+                        
+                        {pug.softRes && (
+                          <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
+                            SoftRes
+                          </span>
+                        )}
+                        
+                        {pug.hrItems.length > 0 && (
+                          <span className="text-xs bg-red-600 text-white px-2 py-1 rounded">
+                            HR Items
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        {isExpired && (
+                          <div className="flex items-center text-red-400 text-xs">
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                            Expired
+                          </div>
+                        )}
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPug(pug);
+                          }}
+                          className="bg-yellow-600 hover:bg-yellow-700 text-black px-4 py-2 rounded text-sm font-bold transition-colors"
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        
+        {/* Quick Stats */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gray-800 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-yellow-400">{filteredPugs.length}</div>
+            <div className="text-gray-400">Total PUGs</div>
+          </div>
+          
+          <div className="bg-gray-800 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-green-400">
+              {filteredPugs.filter(p => p.status === 'recruiting').length}
+            </div>
+            <div className="text-gray-400">Recruiting</div>
+          </div>
+          
+          <div className="bg-gray-800 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-blue-400">
+              {filteredPugs.reduce((sum, pug) => sum + pug.signups, 0)}
+            </div>
+            <div className="text-gray-400">Total Signups</div>
+          </div>
+          
+          <div className="bg-gray-800 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-purple-400">
+              {new Set(filteredPugs.map(p => p.raidName)).size}
+            </div>
+            <div className="text-gray-400">Different Raids</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {showAddPug && isLoggedIn && <AddPugModal />}
+      {selectedPug && <PugDetailModal pug={selectedPug} />}
+      
+      {/* Footer */}
+      <footer className="bg-black/50 border-t border-yellow-600/30 mt-12">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="text-center text-gray-400">
+            <p className="mb-2">
+              <span className="text-yellow-400 font-bold">WoW SoD PUG Finder</span> - Built for Dad Gamers, by Dad Gamers
+            </p>
+            <p className="text-sm">
+              Find your perfect PUG between diaper changes and bedtime stories! 🍼⚔️
+            </p>
+            <div className="flex justify-center items-center space-x-6 mt-4 text-sm">
+              <a href="#" className="hover:text-yellow-400 transition-colors">Discord Integration</a>
+              <a href="#" className="hover:text-yellow-400 transition-colors">Raid Helper API</a>
+              <a href="#" className="hover:text-yellow-400 transition-colors">SoftRes Compatible</a>
+              <a href="#" className="hover:text-yellow-400 transition-colors">Dad Approved™</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default WoWPugFinder;
